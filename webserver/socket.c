@@ -10,6 +10,17 @@ int creer_serveur(int port)
 		perror("Creating serveur socket:");
 		return -1;
 	}
-	return port;
+
+	struct sockaddr_in saddr;
+	saddr.sin_famity = AF_INET;
+	saddr.sin_port = hton(port);
+	saddr.sin_addr.s_addr = INADDR_ANY;
+
+	if (bind(server_socket,(struct sockaddr *)&saddr, sizeof(inet_in)) == -1)
+	{
+		perror("Binding server socket address:");
+		return -1;
+	}
+	return socket;
 }
 

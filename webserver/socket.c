@@ -26,6 +26,18 @@ int bind_socket(int sockfd, int port)
 	return sockfd;
 }
 
+int listen(int sockfd, int backlog_size)
+{
+	if (listen(sockfd, backlog_size) == -1)
+	{
+		perror("Listening to socket:");
+		return -1;
+	}
+	return sockfd;
+}
+
+
+
 int creer_serveur(int port)
 {
 	int sockfd;
@@ -33,11 +45,10 @@ int creer_serveur(int port)
 		return -1;
 	if (bind_socket(sockfd, port) == -1)
 		return -1;
+	if (listen(sockfd, 10) == -1)
+		return -1;
 	
 	return sockfd;
 }
 
-int listen(int sockfd, int backlog_size)
-{
 
-}

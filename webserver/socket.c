@@ -57,7 +57,20 @@ int start(int sockfd)
 		perror("Accepting client connexion:");
 		return -1;
 	}
-	const char *motd = "Welcome to the server!\n";
+	const char *motd = "Welcome to the server!\nWe are Potatoes & co.\nPraise our Lord Mousline, the creator of our potatoid world.\nEvery month we sacrifice a potato to thwart our world's destruction.\nTo join us contact us on PotatoBook or by phone at 000 000 008.\nWe are based in Potatoland, 50 potato-salad street, Potatoville.\nSigning up is free if you subscribe to our monthly insurance plan.(*)\nMay the purée be with you.\nMay the Potato Lord protect us.\n(*) Fees up to 5000000 potatobucks may apply.\n";
 	write(client , motd , strlen(motd));
+
+	int buffer_size = 1024;
+	int ok = 1;
+	while (ok)
+	{
+		unsigned char *buffer = calloc(buffer_size, 1);
+		if (read(client, buffer, buffer_size) > 0)
+			write(client, buffer, buffer_size);
+		else
+			ok = 0;
+		free(buffer);
+	}
+	printf("Connexion stopped.\n");
 	return client;
 }

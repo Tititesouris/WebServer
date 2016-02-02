@@ -1,0 +1,7 @@
+1) Le port est déjà utilisé.
+
+2) Le serveur s'arrête sans avoir envoyé de message au client.
+
+3) La connexion est refusée car on ne peut pas se connecter en IPv6.
+
+4) Le deuxième client ne peut pas se connecter car le serveur ne peut pas accepter plusieurs connexions à la fois.

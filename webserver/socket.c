@@ -41,6 +41,9 @@ int creer_serveur(int port)
 	int sockfd;
 	if ((sockfd = create_socket()) == -1)
 		return -1;
+		int optval = 1;
+	if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(int)) == -1)
+		perror("Setting socket options:");
 	if (bind_socket(sockfd, port) == -1)
 		return -1;
 	if (listen_socket(sockfd, 10) == -1)

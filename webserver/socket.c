@@ -48,4 +48,16 @@ int creer_serveur(int port)
 	return sockfd;
 }
 
-
+int start(int sockfd)
+{
+	int client;
+	client = accept(sockfd, NULL, NULL);
+	if (client == -1)
+	{
+		perror("Accepting client connexion:");
+		return -1;
+	}
+	const char *motd = "Welcome to the server!\n";
+	write(client , motd , strlen(motd));
+	return client;
+}

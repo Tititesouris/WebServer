@@ -84,19 +84,23 @@ int start(int sockfd)
 			perror("Accepting client connexion:");
 			return -1;
 		}
+		FILE *client_file = fdopen(client, "w+");
 		printf("Client connected.\n");
 
 		if (!fork())
 		{
 			const char *motd = "Welcome to the server!\nWe are Potatoes & co.\nPraise our Lord Mousline, the creator of our potatoid world.\nEvery month we sacrifice a potato to thwart our world's destruction.\nTo join us contact us on PotatoBook or by phone at 000 000 008.\nWe are based in Potatoland, 50 potato-salad street, Potatoville.\nSigning up is free if you subscribe to our monthly insurance plan.(*)\nMay the purée be with you.\nMay the Potato Lord protect us.\n(*) Fees up to 5000000 potatobucks may apply.\n";
-			write(client, motd, strlen(motd));
+			fprintf(client_file, motd);
 
 			int buffer_size = 1024;
 			while (1)
 			{
-				unsigned char *buffer = calloc(buffer_size, 1);
-				read(client, buffer, buffer_size);
-				write(client, buffer, buffer_size);
+				char *buffer = calloc(buffer_size, 1);
+
+				printf("<Client> %s", fgets(buffer, buffer_size, client_file));
+				fprintf(client_file, "<Potato> ");
+				fprintf(client_file, buffer);
+				
 				free(buffer);
 			}
 		}

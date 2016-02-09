@@ -8,11 +8,13 @@
 	#include <arpa/inet.h>
 	#include <unistd.h>
 	#include <string.h>
+	#include <signal.h>
 
 	int create_socket(void);
 	int bind_socket(int sockfd, int port);
 	int listen(int sockfd, int backlog_size);
 	int creer_serveur(int port);
 	int start(int sockfd);
+	int start_bis(int sockfd);
 	
 #endif

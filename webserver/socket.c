@@ -1,5 +1,13 @@
 #include "socket.h"
 
+void initialize_signals(void)
+{
+	if (signal(SIGPIPE, SIG_IGN) == SIG_ERR)
+	{
+		perror("Initializing signals:");
+	}
+}
+
 int create_socket(void)
 {
 	int sockfd = socket(AF_INET, SOCK_STREAM, 0);
@@ -38,6 +46,7 @@ int listen_socket(int sockfd, int backlog_size)
 
 int creer_serveur(int port)
 {
+	initialize_signals();
 	int sockfd;
 	if ((sockfd = create_socket()) == -1)
 		return -1;
@@ -58,6 +67,7 @@ int start(int sockfd)
 {
 	int client;
 	client = accept(sockfd, NULL, NULL);
+	printf("Client %d connected.\n", client);
 	if (client == -1)
 	{
 		perror("Accepting client connexion:");
@@ -71,12 +81,38 @@ int start(int sockfd)
 	while (ok)
 	{
 		unsigned char *buffer = calloc(buffer_size, 1);
-		if (read(client, buffer, buffer_size) > 0)
-			write(client, buffer, buffer_size);
-		else
-			ok = 0;
+		read(client, buffer, buffer_size);
+		write(client, buffer, buffer_size);
 		free(buffer);
 	}
-	printf("Connexion stopped.\n");
+	return client;
+}
+
+int start_bis(int sockfd) {
+	int client;
+	while (1) {
+		client = accept(sockfd, NULL, NULL);
+		printf("Client %d connected.\n", client);
+		if (client == -1)
+		{
+			perror("Accepting client connexion:");
+			return -1;
+		}
+		const char *motd = "Welcome to the server!\nWe are Potatoes & co.\nPraise our Lord Mousline, the creator of our potatoid world.\nEvery month we sacrifice a potato to thwart our world's destruction.\nTo join us contact us on PotatoBook or by phone at 000 000 008.\nWe are based in Potatoland, 50 potato-salad street, Potatoville.\nSigning up is free if you subscribe to our monthly insurance plan.(*)\nMay the purée be with you.\nMay the Potato Lord protect us.\n(*) Fees up to 5000000 potatobucks may apply.\n";
+		write(client , motd , strlen(motd));
+
+		int buffer_size = 1024;
+		int ok = 1;
+		while (ok)
+		{
+			unsigned char *buffer = calloc(buffer_size, 1);
+			if (read(client, buffer, buffer_size) > 0)
+				write(client, buffer, buffer_size);
+			else
+				ok = 0;
+			free(buffer);
+		}
+		printf("Client %d disconnected.\n", client);
+	}
 	return client;
 }

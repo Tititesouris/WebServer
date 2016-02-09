@@ -65,27 +65,34 @@ int creer_serveur(int port)
 
 int start(int sockfd)
 {
-	int client;
-	client = accept(sockfd, NULL, NULL);
-	printf("Client %d connected.\n", client);
-	if (client == -1)
+	while (1)
 	{
-		perror("Accepting client connexion:");
-		return -1;
-	}
-	const char *motd = "Welcome to the server!\nWe are Potatoes & co.\nPraise our Lord Mousline, the creator of our potatoid world.\nEvery month we sacrifice a potato to thwart our world's destruction.\nTo join us contact us on PotatoBook or by phone at 000 000 008.\nWe are based in Potatoland, 50 potato-salad street, Potatoville.\nSigning up is free if you subscribe to our monthly insurance plan.(*)\nMay the purée be with you.\nMay the Potato Lord protect us.\n(*) Fees up to 5000000 potatobucks may apply.\n";
-	write(client , motd , strlen(motd));
+		int client;
+		client = accept(sockfd, NULL, NULL);
+		if (client == -1)
+		{
+			perror("Accepting client connexion:");
+			return -1;
+		}
+		printf("Client connected.\n");
 
-	int buffer_size = 1024;
-	int ok = 1;
-	while (ok)
-	{
-		unsigned char *buffer = calloc(buffer_size, 1);
-		read(client, buffer, buffer_size);
-		write(client, buffer, buffer_size);
-		free(buffer);
+		if (!fork())
+		{
+			const char *motd = "Welcome to the server!\nWe are Potatoes & co.\nPraise our Lord Mousline, the creator of our potatoid world.\nEvery month we sacrifice a potato to thwart our world's destruction.\nTo join us contact us on PotatoBook or by phone at 000 000 008.\nWe are based in Potatoland, 50 potato-salad street, Potatoville.\nSigning up is free if you subscribe to our monthly insurance plan.(*)\nMay the purée be with you.\nMay the Potato Lord protect us.\n(*) Fees up to 5000000 potatobucks may apply.\n";
+			write(client , motd , strlen(motd));
+
+			int buffer_size = 1024;
+			int ok = 1;
+			while (ok)
+			{
+				unsigned char *buffer = calloc(buffer_size, 1);
+				read(client, buffer, buffer_size);
+				write(client, buffer, buffer_size);
+				free(buffer);
+			}
+		}
+		close(client);
 	}
-	return client;
 }
 
 int start_bis(int sockfd) {

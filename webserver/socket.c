@@ -76,28 +76,34 @@ int create_server(int port)
 }
 
 int check_http_header(char *line) {
+	int nb_words = 0;
+	char *method;
+	char *uri;
+	char *version;
 
-	// Counting spaces
-	int spaces = 0;
-	unsigned int i;
-	for (i = 0; i < strlen(line); ++i)
+	char *word;
+	word = strtok(line, " ");
+	while (word != NULL)
 	{
-		if (line[i] == ' ') {
-			spaces++;
-		}
+	 	if (nb_words == 0)
+	 		method = word;
+	 	else if (nb_words == 1)
+	 		uri = word;
+	 	else
+	 		version = word;
+		nb_words++;
+	 	word = strtok(NULL, " ");
 	}
+	printf("Method: %s\n", method);
+	printf("URI: %s\n", uri);
+	printf("Version: %s\n", version);
 
-	// First word is the method
-	char method[4];
-	strncpy(method, line, 3);
-	method[3] = '\0';
-
-	// Last word is the version
-	char version[9];
-	strncpy(version, &line[strlen(line) - 10], 8);
-	version[8] = '\0';
-
-	return strcmp(method, "GET") == 0 && spaces == 2 && (strcmp(version, "HTTP/1.0") == 0 || strcmp(version, "HTTP/1.1") == 0);
+	if (strcmp(method, "GET") == 0 && nb_words == 3 && (strcmp(version, "HTTP/1.0\r\n") == 0 || strcmp(version, "HTTP/1.1\r\n") == 0)) {
+		if (strcmp(uri, "/") != 0)
+			return 404;
+		return 200;
+	}
+	return 400;
 }
 
 int start(int sockfd)
@@ -116,41 +122,45 @@ int start(int sockfd)
 
 		if (!fork())
 		{
-			
-
 			int buffer_size = 1024;
 			char *buffer = calloc(buffer_size, 1);
 
 			int first_line_check = 0;
-			int valid_header = 0;
+			int header_code = 0;
 
 			char *line;
 			while ((line = fgets(buffer, buffer_size, client)) != NULL) {
 				printf("<Client> %s", line);
 
 				if (!first_line_check) {
-					valid_header = check_http_header(line);
+					header_code = check_http_header(line);
 					first_line_check = 1;
 				}
 				else if (strcmp(line, "\r\n") == 0 || strcmp(line, "\n") == 0 ) {
-					if (valid_header) {
+					if (header_code == 200) {
 						fprintf(client, "HTTP/1.1 200 OK\r\n");
 						fprintf(client, "Content-Length: %zu\r\n", strlen(motd));
 						fprintf(client, "\r\n");
 						fprintf(client, motd);
 					}
-					else {
+					else if (header_code == 400) {
 						fprintf(client, "HTTP/1.1 400 Bad Request\r\n");
 						fprintf(client, "Connection: close\r\n");
 						fprintf(client, "Content-Length: 17\r\n");
 						fprintf(client, "\r\n");
 						fprintf(client, "400 Bad request\r\n");
 					}
+					else if (header_code == 404) {
+						fprintf(client, "HTTP/1.1 404 Not Found\r\n");
+						fprintf(client, "Connection: close\r\n");
+						fprintf(client, "Content-Length: 15\r\n");
+						fprintf(client, "\r\n");
+						fprintf(client, "404 Not found\r\n");
+					}
 				}
 
 				buffer = calloc(buffer_size, 1);
 			}
-			printf("END %d\n", valid_header);
 			free(buffer);
 
 		}

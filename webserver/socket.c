@@ -1,5 +1,7 @@
 #include "socket.h"
 
+const char *motd = "Welcome to the server!\nWe are Potatoes & co.\nPraise our Lord Mousline, the creator of our potatoid world.\nEvery month we sacrifice a potato to thwart our world's destruction.\nTo join us contact us on PotatoBook or by phone at 000 000 008.\nWe are based in Potatoland, 50 potato-salad street, Potatoville.\nSigning up is free if you subscribe to our monthly insurance plan.(*)\nMay the purée be with you.\nMay the Potato Lord protect us.\n(*) Fees up to 5000000 potatobucks may apply.\n";
+
 void handle_signal(int sig)
 {
 	printf("Client disconnected. (%d)\n", sig);
@@ -92,7 +94,7 @@ int check_http_header(char *line) {
 
 	// Last word is the version
 	char version[9];
-	strncpy(version, &line[strlen(line) - 9], 8);
+	strncpy(version, &line[strlen(line) - 10], 8);
 	version[8] = '\0';
 
 	return strcmp(method, "GET") == 0 && spaces == 2 && (strcmp(version, "HTTP/1.0") == 0 || strcmp(version, "HTTP/1.1") == 0);
@@ -120,35 +122,36 @@ int start(int sockfd)
 			char *buffer = calloc(buffer_size, 1);
 
 			int first_line_check = 0;
+			int valid_header = 0;
 
 			char *line;
 			while ((line = fgets(buffer, buffer_size, client)) != NULL) {
 				printf("<Client> %s", line);
 
 				if (!first_line_check) {
-					if (!check_http_header(line)) {
-						printf("WOOOOOOOOOOOOOO\n");
+					valid_header = check_http_header(line);
+					first_line_check = 1;
+				}
+				else if (strcmp(line, "\r\n") == 0 || strcmp(line, "\n") == 0 ) {
+					if (valid_header) {
+						fprintf(client, "HTTP/1.1 200 OK\r\n");
+						fprintf(client, "Content-Length: %zu\r\n", strlen(motd));
+						fprintf(client, "\r\n");
+						fprintf(client, motd);
+					}
+					else {
 						fprintf(client, "HTTP/1.1 400 Bad Request\r\n");
 						fprintf(client, "Connection: close\r\n");
 						fprintf(client, "Content-Length: 17\r\n");
 						fprintf(client, "\r\n");
 						fprintf(client, "400 Bad request\r\n");
 					}
-					first_line_check = 1;
 				}
 
 				buffer = calloc(buffer_size, 1);
 			}
+			printf("END %d\n", valid_header);
 			free(buffer);
-			
-				//if (spaces == 2					&& strcmp("GET", words[0]) == 0					&& (strcmp("HTTP/1.0", words[2]) == 0						|| strcmp("HTTP/1.1", words[2]) == 0						)) {
-			
-			//while (!(buffer[0] == '\n' || (buffer[0] == '\r' && buffer[1] == '\n')))
-
-/*
-					printf("YES\n");
-					const char *motd = "Welcome to the server!\nWe are Potatoes & co.\nPraise our Lord Mousline, the creator of our potatoid world.\nEvery month we sacrifice a potato to thwart our world's destruction.\nTo join us contact us on PotatoBook or by phone at 000 000 008.\nWe are based in Potatoland, 50 potato-salad street, Potatoville.\nSigning up is free if you subscribe to our monthly insurance plan.(*)\nMay the purée be with you.\nMay the Potato Lord protect us.\n(*) Fees up to 5000000 potatobucks may apply.\n";
-					fprintf(client, motd);*/
 
 		}
 		close(client_socket);

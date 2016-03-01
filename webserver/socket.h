@@ -10,6 +10,7 @@
 	#include <unistd.h>
 	#include <string.h>
 	#include <signal.h>
+	#include <regex.h>
 
 	int create_server(int port);
 	int start(int sockfd);

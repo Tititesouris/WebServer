@@ -2,6 +2,20 @@
 
 const char *motd = "Welcome to the server!\nWe are Potatoes & co.\nPraise our Lord Mousline, the creator of our potatoid world.\nEvery month we sacrifice a potato to thwart our world's destruction.\nTo join us contact us on PotatoBook or by phone at 000 000 008.\nWe are based in Potatoland, 50 potato-salad street, Potatoville.\nSigning up is free if you subscribe to our monthly insurance plan.(*)\nMay the purée be with you.\nMay the Potato Lord protect us.\n(*) Fees up to 5000000 potatobucks may apply.\n";
 
+enum  http_method {
+	HTTP_GET ,
+	HTTP_UNSUPPORTED ,
+};
+
+typedef  struct
+{
+	enum  http_method  method;
+	int   major_version;
+	int   minor_version;
+	char *url;
+} http_request;
+
+
 void handle_signal(int sig)
 {
 	printf("Client disconnected. (%d)\n", sig);
@@ -106,11 +120,48 @@ int check_http_header(char *line) {
 	return 400;
 }
 
+char *fgets_or_exit(char *buffer, int size, FILE *stream) {
+
+    if (fgets(buffer, size, stream) == NULL) {
+        exit(0);
+    } else {
+        return buffer;
+    }
+}
+
+
+void send_status(FILE *client, int code, const char * reason_phrase) {
+    fprintf(client, "HTTP/1.1 %d %s\r\n", code, reason_phrase);
+}
+
+void send_response(FILE *client, int code, const char *reason_phrase, const char * message_body) {
+
+    // send status
+    send_status(client, code, reason_phrase);
+
+    // connection closed
+    fprintf(client, "Connection: close\r\n");
+
+    // content length
+    fprintf(client, "Content-length: %zu\r\n", strlen(message_body));
+    ;
+
+    fprintf(client, "\r\n");
+
+    // message body
+    fprintf(client, "%s", message_body);
+
+    // sends
+    fflush(client);
+
+}
+
 int start(int sockfd)
 {
 	while (1)
 	{
 		int client_socket;
+
 		client_socket = accept(sockfd, NULL, NULL);
 		if (client_socket == -1)
 		{
@@ -136,6 +187,8 @@ int start(int sockfd)
 					header_code = check_http_header(line);
 					first_line_check = 1;
 				}
+
+
 				else if (strcmp(line, "\r\n") == 0 || strcmp(line, "\n") == 0 ) {
 					if (header_code == 200) {
 						fprintf(client, "HTTP/1.1 200 OK\r\n");

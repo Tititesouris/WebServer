@@ -2,16 +2,16 @@
 
 const char *motd = "Welcome to the server!\nWe are Potatoes & co.\nPraise our Lord Mousline, the creator of our potatoid world.\nEvery month we sacrifice a potato to thwart our world's destruction.\nTo join us contact us on PotatoBook or by phone at 000 000 008.\nWe are based in Potatoland, 50 potato-salad street, Potatoville.\nSigning up is free if you subscribe to our monthly insurance plan.(*)\nMay the purée be with you.\nMay the Potato Lord protect us.\n(*) Fees up to 5000000 potatobucks may apply.\n";
 
-enum  http_method {
-	HTTP_GET ,
-	HTTP_UNSUPPORTED ,
+enum http_method {
+	HTTP_GET,
+	HTTP_UNSUPPORTED,
 };
 
-typedef  struct
+typedef struct
 {
-	enum  http_method  method;
-	int   major_version;
-	int   minor_version;
+	enum http_method method;
+	int major_version;
+	int minor_version;
 	char *url;
 } http_request;
 
@@ -89,71 +89,54 @@ int create_server(int port)
 	return sockfd;
 }
 
-int check_http_header(char *line) {
-	int nb_words = 0;
-	char *method;
-	char *uri;
-	char *version;
 
-	char *word;
-	word = strtok(line, " ");
-	while (word != NULL)
-	{
-	 	if (nb_words == 0)
-	 		method = word;
-	 	else if (nb_words == 1)
-	 		uri = word;
-	 	else
-	 		version = word;
-		nb_words++;
-	 	word = strtok(NULL, " ");
-	}
-	printf("Method: %s\n", method);
-	printf("URI: %s\n", uri);
-	printf("Version: %s\n", version);
-
-	if (strcmp(method, "GET") == 0 && nb_words == 3 && (strcmp(version, "HTTP/1.0\r\n") == 0 || strcmp(version, "HTTP/1.1\r\n") == 0)) {
-		if (strcmp(uri, "/") != 0)
-			return 404;
-		return 200;
-	}
-	return 400;
-}
-
-char *fgets_or_exit(char *buffer, int size, FILE *stream) {
-
-    if (fgets(buffer, size, stream) == NULL) {
+char *fgets_or_exit(char *buffer, int size, FILE *stream)
+{
+    if (fgets(buffer, size, stream) == NULL)
+    {
         exit(0);
-    } else {
+    }
+    else
+    {
         return buffer;
     }
 }
 
+int parse_http_request(char *request_line, http_request *request) {
 
-void send_status(FILE *client, int code, const char * reason_phrase) {
-    fprintf(client, "HTTP/1.1 %d %s\r\n", code, reason_phrase);
+	char *word;
+	if ((word = strtok(request_line, " ")) != NULL)
+		request->method = (strcmp(word, "GET")) ? HTTP_UNSUPPORTED : HTTP_GET;
+
+	if ((word = strtok(NULL, " ")) != NULL)
+		request->url = word;
+
+	if ((word = strtok(NULL, " ")) != NULL) {
+		if (strlen(word) == 10)
+			request->major_version = word[5];
+		else
+			return -1;
+	}
+
+	if ((word = strtok(NULL, " ")) != NULL) {
+		if (strlen(word) == 10)
+			request->minor_version = word[7];
+		else
+			return -1;
+	}
+
+	return 0;
 }
 
-void send_response(FILE *client, int code, const char *reason_phrase, const char * message_body) {
-
-    // send status
-    send_status(client, code, reason_phrase);
-
-    // connection closed
-    fprintf(client, "Connection: close\r\n");
-
-    // content length
-    fprintf(client, "Content-length: %zu\r\n", strlen(message_body));
-    ;
-
-    fprintf(client, "\r\n");
-
-    // message body
-    fprintf(client, "%s", message_body);
-
-    // sends
-    fflush(client);
-
+void skip_headers(FILE *client) {
+	int buffer_size = 1024;
+	char *buffer = calloc(buffer_size, 1);
+	char *line;
+	do {
+		line = fgets_or_exit(buffer, buffer_size, client);
+		printf("<Client> %s", line);
+	}
+	while (!(strcmp(line, "\r\n") == 0 || strcmp(line, "\n") == 0));
 }
 
 int start(int sockfd)
@@ -176,41 +159,36 @@ int start(int sockfd)
 			int buffer_size = 1024;
 			char *buffer = calloc(buffer_size, 1);
 
-			int first_line_check = 0;
-			int header_code = 0;
-
 			char *line;
-			while ((line = fgets(buffer, buffer_size, client)) != NULL) {
+			while (1) {
+				line = fgets_or_exit(buffer, buffer_size, client);
 				printf("<Client> %s", line);
 
-				if (!first_line_check) {
-					header_code = check_http_header(line);
-					first_line_check = 1;
+				http_request request;
+				if (parse_http_request(line, &request)) {
+					skip_headers(client);
+					fprintf(client, "HTTP/1.1 400 Bad Request\r\n");
+					fprintf(client, "Connection: close\r\n");
+					fprintf(client, "Content-Length: 17\r\n");
+					fprintf(client, "\r\n");
+					fprintf(client, "400 Bad request\r\n");
+					exit(0);
+				}
+				skip_headers(client);
+				if (strcmp(request.url, "/") != 0) {
+					fprintf(client, "HTTP/1.1 404 Not Found\r\n");
+					fprintf(client, "Connection: close\r\n");
+					fprintf(client, "Content-Length: 15\r\n");
+					fprintf(client, "\r\n");
+					fprintf(client, "404 Not found\r\n");
+					exit(0);
 				}
 
-
-				else if (strcmp(line, "\r\n") == 0 || strcmp(line, "\n") == 0 ) {
-					if (header_code == 200) {
-						fprintf(client, "HTTP/1.1 200 OK\r\n");
-						fprintf(client, "Content-Length: %zu\r\n", strlen(motd));
-						fprintf(client, "\r\n");
-						fprintf(client, motd);
-					}
-					else if (header_code == 400) {
-						fprintf(client, "HTTP/1.1 400 Bad Request\r\n");
-						fprintf(client, "Connection: close\r\n");
-						fprintf(client, "Content-Length: 17\r\n");
-						fprintf(client, "\r\n");
-						fprintf(client, "400 Bad request\r\n");
-					}
-					else if (header_code == 404) {
-						fprintf(client, "HTTP/1.1 404 Not Found\r\n");
-						fprintf(client, "Connection: close\r\n");
-						fprintf(client, "Content-Length: 15\r\n");
-						fprintf(client, "\r\n");
-						fprintf(client, "404 Not found\r\n");
-					}
-				}
+				fprintf(client, "HTTP/1.1 200 OK\r\n");
+				fprintf(client, "Content-Length: %zu\r\n", strlen(motd));
+				fprintf(client, "\r\n");
+				fprintf(client, motd);
+				exit(0);
 
 				buffer = calloc(buffer_size, 1);
 			}

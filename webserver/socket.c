@@ -170,25 +170,25 @@ int start(int sockfd)
 			int buffer_size = 1024;
 			char *buffer = calloc(buffer_size, 1);
 
+			int bad_request = 0;
+
 			char *line;
 			while (1) {
 				line = fgets_or_exit(buffer, buffer_size, client);
 				printf("<Client> %s", line);
 
 				http_request request;
-				if (parse_http_request(line, &request)) {
-					skip_headers(client);
-					send_response(client, 400, "Bad Request", "400 Bad request");
-					exit(0);
-				}
+				bad_request = parse_http_request(line, &request);
 				skip_headers(client);
-				if (strcmp(request.url, "/") != 0) {
-					send_response(client, 404, "Not Found", "404 Not found");
-					exit(0);
-				}
 
-				send_response(client, 200, "OK", motd);
-				exit(0);
+				if (bad_request)
+					send_response(client, 400, "Bad Request", "400 Bad request");
+				else if (strcmp(request.url, "/") != 0)
+					send_response(client, 404, "Not Found", "404 Not found");
+				else if (request.method == HTTP_UNSUPPORTED)
+					send_response(client, 405, "Method Not Allowed", "405 Method not allowed");
+				else
+					send_response(client, 200, "OK", motd);
 
 				buffer = calloc(buffer_size, 1);
 			}

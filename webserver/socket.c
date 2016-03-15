@@ -139,6 +139,17 @@ void skip_headers(FILE *client) {
 	while (!(strcmp(line, "\r\n") == 0 || strcmp(line, "\n") == 0));
 }
 
+void send_status(FILE *client, int code, const char *reason) {
+	fprintf(client, "HTTP/1.1 %d %s\r\n", code, reason);
+}
+
+void send_response(FILE *client, int code, const char *reason, const char *body) {
+	send_status(client, code, reason);
+	fprintf(client, "Content-Length: %zu\r\n", strlen(body));
+	fprintf(client, "\r\n");
+	fprintf(client, "%s\r\n", body);
+}
+
 int start(int sockfd)
 {
 	while (1)
@@ -167,27 +178,16 @@ int start(int sockfd)
 				http_request request;
 				if (parse_http_request(line, &request)) {
 					skip_headers(client);
-					fprintf(client, "HTTP/1.1 400 Bad Request\r\n");
-					fprintf(client, "Connection: close\r\n");
-					fprintf(client, "Content-Length: 17\r\n");
-					fprintf(client, "\r\n");
-					fprintf(client, "400 Bad request\r\n");
+					send_response(client, 400, "Bad Request", "400 Bad request");
 					exit(0);
 				}
 				skip_headers(client);
 				if (strcmp(request.url, "/") != 0) {
-					fprintf(client, "HTTP/1.1 404 Not Found\r\n");
-					fprintf(client, "Connection: close\r\n");
-					fprintf(client, "Content-Length: 15\r\n");
-					fprintf(client, "\r\n");
-					fprintf(client, "404 Not found\r\n");
+					send_response(client, 404, "Not Found", "404 Not found");
 					exit(0);
 				}
 
-				fprintf(client, "HTTP/1.1 200 OK\r\n");
-				fprintf(client, "Content-Length: %zu\r\n", strlen(motd));
-				fprintf(client, "\r\n");
-				fprintf(client, motd);
+				send_response(client, 200, "OK", motd);
 				exit(0);
 
 				buffer = calloc(buffer_size, 1);
